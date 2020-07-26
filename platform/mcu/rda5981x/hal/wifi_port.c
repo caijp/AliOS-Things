@@ -2,14 +2,12 @@
  * Copyright (C) 2015-2017 Alibaba Group Holding Limited
  */
 
+#include <ulog/ulog.h>
 #include "rda59xx_daemon.h"
 #include "rda59xx_wifi_include.h"
 #include "hal/wifi.h"
 #include "lwip/ip4_addr.h"
 #include "lwip/inet.h"
-#ifndef DELETE_HFILOP_CODE
-#include "ota_hal_plat.h"
-#endif
 
 typedef enum {
     SCAN_NORMAL,
@@ -19,13 +17,27 @@ hal_wifi_ip_stat_t ip_stat;
 
 unsigned int filter_backup = 0;
 
+static rda59xx_sta_info sta_info = {0};
+static bool sta_try_reconnect = false;
+static void handle_connect_fail(void *arg)
+{
+    LOG("%s\r\n", __func__);
+    aos_msleep(500);
+    rda59xx_sta_connect(&sta_info);
+}
+
 void wifi_event_cb(WIFI_EVENT evt, void* info)
 {
     hal_wifi_module_t *m = hal_wifi_get_default_module();
+    hal_wifi_ip_stat_t ip_stat;
+    hal_wifi_ap_info_adv_t ap_info;
 
     rda59xx_bss_info bss_info;
     switch (evt) {
         case EVENT_STA_GOT_IP: {
+#if (WIFI_CONFIG_SUPPORT_LOWPOWER > 0)
+            m->enter_powersave(m, WIFI_CONFIG_RECEIVE_DTIM);
+#endif
             rda59xx_sta_get_bss_info(&bss_info);
             memcpy(ip_stat.ip, ip4addr_ntoa(&(bss_info.ipaddr)), sizeof(ip_stat.ip));
             memcpy(ip_stat.gate, ip4addr_ntoa(&(bss_info.gateway)), sizeof(ip_stat.gate));
@@ -35,6 +47,13 @@ void wifi_event_cb(WIFI_EVENT evt, void* info)
                     bss_info.bssid[0], bss_info.bssid[1], bss_info.bssid[2], bss_info.bssid[3], bss_info.bssid[4], bss_info.bssid[5]);
             if (m->ev_cb && m->ev_cb->ip_got) {
                 m->ev_cb->ip_got(m, &ip_stat, NULL);
+            }
+            memcpy(ap_info.bssid, bss_info.bssid, 6);
+            memcpy(ap_info.ssid, bss_info.ssid, bss_info.ssid_len);
+            ap_info.channel = bss_info.channel;
+            ap_info.security = bss_info.secure;
+            if (m->ev_cb && m->ev_cb->para_chg) {
+                m->ev_cb->para_chg(m, &ap_info, NULL, 0, NULL);
             }
             break;
         }
@@ -51,8 +70,12 @@ void wifi_event_cb(WIFI_EVENT evt, void* info)
             break;
         }
         case EVENT_STA_CONNECT_FAIL: {
+            LOG("%s EVENT_STA_CONNECT_FAIL\r\n", __func__);
             if (m->ev_cb && m->ev_cb->connect_fail) {
                 m->ev_cb->connect_fail(m, 0, NULL);
+            }
+            if (sta_try_reconnect) {
+                aos_schedule_call(handle_connect_fail, NULL);
             }
             break;
         }
@@ -167,11 +190,6 @@ static int wifi_init(hal_wifi_module_t *m)
     rda59xx_wifi_set_event_cb(wifi_event_cb);
 
 #ifndef DELETE_HFILOP_CODE
-  //  extern struct hal_ota_module_s rda59xx_ota_module;
- //   hal_ota_register_module(&rda59xx_ota_module);
-	extern ota_hal_module_t ota_hal_module;
-	ota_hal_register_module(&ota_hal_module);
-
     extern void hfilop_ota_auto_upgrade(char *ssid, char *pwd);
     hfilop_ota_auto_upgrade(NULL, NULL);
 
@@ -200,8 +218,7 @@ static void wifi_set_mac_addr(hal_wifi_module_t *m, const uint8_t *mac)
 
 static int wifi_start(hal_wifi_module_t *m, hal_wifi_init_type_t *init_para)
 {
-    rda59xx_sta_info sta_info;
-
+    sta_try_reconnect = true;
     memset(&sta_info, 0, sizeof(rda59xx_sta_info));
     memcpy(sta_info.ssid, init_para->wifi_ssid, 32+1);
     memcpy(sta_info.pw, init_para->wifi_key, 64+1);
@@ -228,7 +245,7 @@ static int wifi_start(hal_wifi_module_t *m, hal_wifi_init_type_t *init_para)
 static int wifi_start_adv(hal_wifi_module_t *m,
                           hal_wifi_init_type_adv_t *init_para_adv)
 {
-    printf("WiFi HAL %s not implemeted yet!\r\n", __func__);
+    LOG("WiFi HAL %s not implemeted yet!\r\n", __func__);
     return 0;
 }
 
@@ -351,24 +368,26 @@ static void start_scan_adv(hal_wifi_module_t *m)
 
 static int power_off(hal_wifi_module_t *m)
 {
-    printf("WiFi HAL %s not implemeted yet!\r\n", __func__);
+    LOG("WiFi HAL %s not implemeted yet!\r\n", __func__);
     return 0;
 }
 
 static int power_on(hal_wifi_module_t *m)
 {
-    printf("WiFi HAL %s not implemeted yet!\r\n", __func__);
+    LOG("WiFi HAL %s not implemeted yet!\r\n", __func__);
     return 0;
 }
 
 static int suspend(hal_wifi_module_t *m)
 {
+    sta_try_reconnect = false;
     rda59xx_sta_disconnect();
     return 0;
 }
 
 static int suspend_station(hal_wifi_module_t *m)
 {
+    sta_try_reconnect = false;
     rda59xx_sta_disconnect();
     return 0;
 }
@@ -412,6 +431,7 @@ static void start_monitor(hal_wifi_module_t *m)
 {
     //if softap smartconfig failed, it will start monitor dirictly
     //so add disconnect to end last link
+    sta_try_reconnect = false;
     rda59xx_sta_disconnect();
     rda59xx_sniffer_enable(sniffer_cb);
     rda59xx_sniffer_set_filter(1, 1, 0x27e77);
@@ -458,10 +478,13 @@ static void register_wlan_mgnt_monitor_cb(hal_wifi_module_t *m,
                                           monitor_data_cb_t fn)
 {
     data_cb = fn;
-    rda59xx_sniffer_enable(sniffer_cb);
-    rda59xx_sniffer_set_filter(1, 1, 0x7fe77);
-    filter_backup = 0x7fe77;
-    return 0;
+    if (data_cb) {
+        rda59xx_sniffer_enable(sniffer_cb);
+        rda59xx_sniffer_set_filter(1, 1, 0x7fe77);
+        filter_backup = 0x7fe77;
+    } else {
+        rda59xx_sniffer_disable();
+    }
 }
 
 static int wlan_send_80211_raw_frame(hal_wifi_module_t *m,
@@ -469,6 +492,52 @@ static int wlan_send_80211_raw_frame(hal_wifi_module_t *m,
 {
     rda59xx_send_rawdata(buf, len);
     return 0;
+}
+
+
+#if (WIFI_CONFIG_SUPPORT_LOWPOWER > 0)
+static int set_listeninterval(hal_wifi_module_t *m, uint8_t listen_interval)
+{
+    rda5981_set_sta_listen_interval(listen_interval);
+    return 0;
+}
+
+static int enter_powersave(hal_wifi_module_t *m, uint8_t recvDTIMs)
+{
+    printf("enter_powersave\n");
+    wland_set_sta_sleep(1);
+    return 0;
+}
+
+static int exit_powersave(hal_wifi_module_t *m)
+{
+    wland_set_sta_sleep(0);
+    return 0;
+}
+
+#endif
+
+static int get_wireless_info(hal_wifi_module_t *m, void *wireless_info)
+{
+    hal_wireless_info_t *info = (hal_wireless_info_t *)wireless_info;
+
+    rda59xx_bss_info bss_info;
+    unsigned int state = 0;
+
+    printf("get wireless info\r\n");
+
+    if (info == NULL)
+        return -1;
+
+    state = rda59xx_get_module_state();
+    if (state & STATE_STA) {
+        rda59xx_sta_get_bss_info(&bss_info);
+        if (bss_info.rssi > 0)
+            bss_info.rssi -= 128;
+        info->rssi = bss_info.rssi;
+        return 0;
+    }
+    return -1;
 }
 
 hal_wifi_module_t aos_wifi_rda59xx = {
@@ -497,6 +566,13 @@ hal_wifi_module_t aos_wifi_rda59xx = {
     .register_wlan_mgnt_monitor_cb = register_wlan_mgnt_monitor_cb,
     .wlan_send_80211_raw_frame = wlan_send_80211_raw_frame,
 
+#if (WIFI_CONFIG_SUPPORT_LOWPOWER > 0)
+    .set_listeninterval =  set_listeninterval,
+    .enter_powersave    =  enter_powersave,
+    .exit_powersave     =  exit_powersave,
+#endif
+
+    .get_wireless_info  = get_wireless_info,
     /* mesh related */
     //.mesh_register_cb    =  register_mesh_cb,
     //.mesh_enable         =  mesh_enable,

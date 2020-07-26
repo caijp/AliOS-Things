@@ -1,11 +1,19 @@
 /**
  * File : aos.c
  */
+
+#include "aos/init.h"
 #include "aos/kernel.h"
+#include "uagent/uagent.h"
 #include "ulog/ulog.h"
 #include <k_api.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef AOS_COMP_PWRMGMT
+int pwrmgmt_init();
+#endif
+
 #define AOS_START_STACK 2048
 
 // #define WIFI_PRODUCT_INFO_SIZE                      ES_WIFI_MAX_SSID_NAME_SIZE
@@ -35,12 +43,17 @@ static void sys_init(void)
     hw_start_hal();
     vfs_init();
     vfs_device_init();
+
+#ifdef AOS_COMP_UAGENT
+    uagent_init();
+#endif
+
 #ifdef AOS_COMP_CLI
     aos_cli_init();
 #endif
 
 #ifdef AOS_COMP_ULOG
-    ulog_init("A");
+    ulog_init();
 #endif
     aos_kv_init();
     aos_loop_init();
@@ -53,6 +66,11 @@ static void sys_init(void)
     board_init_later();
 #endif
 
+    aos_show_welcome();
+
+#ifdef AOS_COMP_PWRMGMT
+    pwrmgmt_init();
+#endif
     application_start(0, NULL);
 #endif
 }
@@ -61,7 +79,7 @@ static void sys_init(void)
 void sys_start(void)
 {
     aos_init();
-    krhino_task_dyn_create(&g_aos_init, "aos-init", 0, AOS_DEFAULT_APP_PRI, 0, AOS_START_STACK*4, (task_entry_t)sys_init, 1);
+    krhino_task_dyn_create(&g_aos_init, "aos-init", 0, AOS_DEFAULT_APP_PRI, 0, AOS_START_STACK, (task_entry_t)sys_init, 1);
     aos_start();
 }
 

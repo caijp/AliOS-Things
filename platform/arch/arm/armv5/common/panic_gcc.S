@@ -1,5 +1,4 @@
 #include "k_config.h"
-#include "debug_config.h"
 
 @******************************************************************************
 @                                 EQUATES
@@ -12,51 +11,51 @@
 .align 2
 .syntax unified
 
-#if (DEBUG_CONFIG_PANIC > 0)
+#ifdef AOS_COMP_DEBUG
 
 @******************************************************************************
 @                            EXTERN PARAMETERS
 @******************************************************************************
 .extern panicHandler
-  
+
 @******************************************************************************
 @                            EXPORT FUNCTIONS
 @******************************************************************************
-.global	_exc_udf_handler
-.global	_exc_pabt_handler
-.global	_exc_dabt_handler
+.global __wrap_boot_undefined
+.global __wrap_boot_pabort
+.global __wrap_boot_dabort
 
 @******************************************************************************
 @                             FAULT FUNCTIONS
 @******************************************************************************
-_exc_udf_handler:
-    PUSH    {R0-R3}                                        
+__wrap_boot_undefined:
+    PUSH    {R0-R3}
     MOV     R2, #1              @ Exception type
     MRS     R1, SPSR            @ CPSR before exception
-    SUB     R0, LR, #2 
+    SUB     R0, LR, #2
     TST     R1, #0x20           @ CPSR[5], 1 Thumb, 0 ARM
     SUBEQ   R0, R0, #2          @ PC before exception
-    PUSH    {R4}                                        
+    PUSH    {R4}
     MOV     R3, SP              @ SP_udf
     ADD     SP, SP, #20
     B       _exc_handler
 
-_exc_pabt_handler:
-    PUSH    {R0-R3}                                        
+__wrap_boot_pabort:
+    PUSH    {R0-R3}
     MOV     R2, #2              @ Exception type
     MRS     R1, SPSR            @ CPSR before exception
     SUB     R0, LR, #4          @ PC before exception
-    PUSH    {R4}                                        
+    PUSH    {R4}
     MOV     R3, SP              @ SP_abt
     ADD     SP, SP, #20
     B       _exc_handler
 
-_exc_dabt_handler:
-    PUSH    {R0-R3}                                        
+__wrap_boot_dabort:
+    PUSH    {R0-R3}
     MOV     R2, #3              @ Exception type
     MRS     R1, SPSR            @ CPSR before exception
     SUB     R0, LR, #8          @ PC before exception
-    PUSH    {R4}                                        
+    PUSH    {R4}
     MOV     R3, SP              @ SP_abt
     ADD     SP, SP, #20
     B       _exc_handler
@@ -85,6 +84,12 @@ _exc_handler:
     MOV     R0, R3
     CMP     R1, #1
     MOVNE   R0, #0
+#if (DEBUG_CONFIG_PANIC_PRT_INT > 0)
+    @printf use interrupt, so here enable it
+    MRS     R1, CPSR            @ Set IRQ and FIQ bits in CPSR to disable all interrupts
+    ORR     R1, R1, #0xC0
+    MSR     CPSR_c, R1
+#endif
     BL      panicHandler
 
 #endif

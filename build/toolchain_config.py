@@ -1,6 +1,9 @@
 # Download toolchain automatically
 auto_download = "yes"
 
+# Search board from specific directories
+board_dirs = ["platform/board/board_legacy"]
+
 # Available toolchains
 toolchains = {
     'arm-none-eabi':{
@@ -73,18 +76,6 @@ toolchains = {
         'Linux64_url': 'https://gitee.com/alios-things/gcc-nds32le-linux.git',
         'OSX_url': '',
         },
-
-    'openocd': {
-        'name': 'OpenOCD',
-        'path': 'build/OpenOCD',
-        'command': 'openocd',
-        'version': '0.10.0',
-        'use_global': False,
-        'Win32_url': 'https://gitee.com/alios-things/openocd-win32.git',
-        'Linux32_url': '',
-        'Linux64_url': 'https://gitee.com/alios-things/openocd-linux64.git',
-        'OSX_url': 'https://gitee.com/alios-things/openocd-osx.git',
-    }
 }
 
 # Board and toolchain mapping
@@ -92,9 +83,11 @@ boards = {
     'aaboard_demo':[toolchains['arm-none-eabi']],
     'amebaz_dev':[toolchains['arm-none-eabi']],
     'ap80a0':[toolchains['arm-none-eabi']],
+    'asr5501':[toolchains['arm-none-eabi']],
     'atsame54-xpro':[toolchains['arm-none-eabi']],
     'b_l475e':[toolchains['arm-none-eabi']],
     'bk7231devkitc':[toolchains['arm-none-eabi']],
+    'bk7231sdevkitc':[toolchains['arm-none-eabi']],
     'bk7231udevkitc':[toolchains['arm-none-eabi']],
     'cy8ckit-062':[toolchains['arm-none-eabi']],
     'developerkit':[toolchains['arm-none-eabi']],
@@ -104,6 +97,7 @@ boards = {
     'evkmimxrt1020':[toolchains['arm-none-eabi']],
     'esp32devkitc':[toolchains['xtensa-esp32']],
     'esp8266':[toolchains['xtensa-lx106']],
+    'esp8285':[toolchains['xtensa-lx106']],
     'fm33a0xx-discovery':[toolchains['arm-none-eabi']],
     'frdmkl26z':[toolchains['arm-none-eabi']],
     'frdmkl27z':[toolchains['arm-none-eabi']],
@@ -131,8 +125,8 @@ boards = {
     'm100c':[toolchains['arm-none-eabi']],
     'm400':[toolchains['arm-none-eabi']],
     'mk1101':[toolchains['arm-none-eabi']],
-    'mk3060':[toolchains['arm-none-eabi'], toolchains['openocd']],
-    'mk3080':[toolchains['arm-none-eabi'], toolchains['openocd']],
+    'mk3060':[toolchains['arm-none-eabi']],
+    'mk3080':[toolchains['arm-none-eabi']],
     'mk3165':[toolchains['arm-none-eabi']],
     'mk3166':[toolchains['arm-none-eabi']],
     'mk3239':[toolchains['arm-none-eabi']],

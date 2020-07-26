@@ -1,7 +1,7 @@
 NAME := mcu_nrf52xxx
 
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION    := 1.0.0
+$(NAME)_VERSION    := 1.0.2
 $(NAME)_SUMMARY    := driver & sdk &ble controller for platform/mcu nrf52810 nrf52832 or nrf52840
 
 $(NAME)_COMPONENTS += arch_armv7m
@@ -76,7 +76,7 @@ $(NAME)_SOURCES += Drivers/boards/boards.c \
 $(NAME)_SOURCES += aos/soc_impl.c \
                    aos/aos.c
 
-ifeq ($(ble),1)
+ifneq ($(EN_BLE_HOST),)
 $(NAME)_SOURCES  += hal/ble_port.c
 endif
 
@@ -132,9 +132,12 @@ endif
 
 include $($(NAME)_LOCATION)/$(HOST_MCU_NAME).mk
 
+$(NAME)_COMPONENTS-$(!bt_mesh_standalone_deploy) += bt_host
 ifneq ($(bt_mesh_standalone_deploy),1)
-$(NAME)_COMPONENTS += bt_host
 include $($(NAME)_LOCATION)/bt_controller/bt_controller.mk
 endif
 
-GLOBAL_DEFINES-y += MBEDTLS_AES_ROM_TABLES
+GLOBAL_DEFINES-y += MBEDTLS_AES_ROM_TABLES BLE_OTA_SUPPORT_IMAGE_HEAD
+
+EXTRA_TARGET_MAKEFILES +=  $($(HOST_MCU_FAMILY)_LOCATION)/gen_image_bin.mk
+

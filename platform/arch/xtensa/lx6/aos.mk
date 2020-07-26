@@ -1,7 +1,7 @@
 NAME := arch_xtensa_lx6
 
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION    := 1.0.0
+$(NAME)_VERSION    := 1.0.2
 $(NAME)_SUMMARY    := arch for xtensa_lx6
 
 $(NAME)_SOURCES := \
@@ -22,7 +22,7 @@ $(NAME)_INCLUDES := \
                     ../../mcu/esp32/espidf/components/log/include       \
                     ../../mcu/esp32/espidf/components/driver/include
 
-GLOBAL_INCLUDES += . ./include    \
-                   ./include/frxt \
+GLOBAL_INCLUDES += include    \
+                   include/frxt \
                    ../../mcu/esp32/espidf/components/esp32/include
 

@@ -2,10 +2,10 @@ NAME := mcu_m487jidae
 HOST_OPENOCD := m487jidae
 
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION    := 1.0.0
+$(NAME)_VERSION    := 1.0.2
 $(NAME)_SUMMARY    := driver & sdk for platform/mcu m487jidae
 
-$(NAME)_COMPONENTS += arch_armv7m rhino
+$(NAME)_COMPONENTS += arch_armv7m rhino osal_aos
 
 GLOBAL_INCLUDES += drivers/lwIP/include/netif \
                    drivers/lwIP/include \
@@ -106,6 +106,7 @@ $(NAME)_SOURCES += drivers/common/pinmap_common.c \
 
 ifeq ($(ETHERNET),1)
 $(NAME)_SOURCES += drivers/lwIP/netif/m480_eth.c
+$(NAME)_SOURCES += hal/eth_port.c
 endif
 
 ifeq ($(COMPILER),armcc)
@@ -158,4 +159,8 @@ GLOBAL_LDFLAGS += -mcpu=cortex-m4  \
                   -mfloat-abi=hard \
                   -mfpu=fpv4-sp-d16 \
                   $(CLIB_LDFLAGS_NANO_FLOAT)
+endif
+
+ifeq ($(HOST_OS),Win32)
+#EXTRA_TARGET_MAKEFILES +=  $($(HOST_MCU_FAMILY)_LOCATION)/gen_image_bin.mk
 endif

@@ -7,6 +7,7 @@
 #include <string.h>
 #include <network/network.h>
 #include "hal/wifi.h"
+#include "aos/hal/wdg.h"
 #include "esp_smartconfig.h"
 #include "esp_wifi_types.h"
 #include "esp_wifi.h"
@@ -22,6 +23,8 @@ typedef enum {
 
 extern esp_err_t esp_wifi_set_promiscous_autoack(bool, uint8_t *);
 extern esp_err_t esp_wifi_set_auto_connect(bool c);
+
+static uint8_t _bssid[6];
 
 /**
     @brief Wifi scan ready
@@ -154,7 +157,9 @@ static esp_err_t handle_event_cb(void *ctx, system_event_t *evt)
 {
     hal_wifi_module_t *m = hal_wifi_get_default_module();
     hal_wifi_ip_stat_t stat;
+    hal_wifi_ap_info_adv_t info = {0};
     int eid = evt->event_id;
+
     printf("%s %d\n", __func__, eid);
     switch (eid) {
         case SYSTEM_EVENT_STA_START:
@@ -174,6 +179,10 @@ static esp_err_t handle_event_cb(void *ctx, system_event_t *evt)
             if (m->ev_cb && m->ev_cb->ip_got) {
                 m->ev_cb->ip_got(m, &_ip_stat, NULL);
             }
+            if (m->ev_cb && m->ev_cb->para_chg) {
+                memcpy(info.bssid, _bssid, 6);
+                m->ev_cb->para_chg(m, &info, NULL, 0, NULL);
+            }
             break;
         }
         case SYSTEM_EVENT_SCAN_DONE: {
@@ -181,6 +190,7 @@ static esp_err_t handle_event_cb(void *ctx, system_event_t *evt)
         }
         case SYSTEM_EVENT_STA_CONNECTED: {
             wifi_status.sta_connected = 1;
+            memcpy(_bssid, evt->event_info.connected.bssid, 6);
             if (m->ev_cb && m->ev_cb->stat_chg) {
                 m->ev_cb->stat_chg(m, NOTIFY_STATION_UP, NULL);
             }
@@ -362,6 +372,7 @@ static int wifi_init(hal_wifi_module_t *m)
     ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
     esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_start();
+    hal_wdg_finalize(NULL);
     return 0;
 };
 
@@ -533,6 +544,27 @@ static int mesh_disable(hal_wifi_module_t *module)
     return 0;
 }
 
+static int get_wireless_info(hal_wifi_module_t *m, hal_wireless_info_t *wireless_info)
+{
+    hal_wireless_info_t *info = (hal_wireless_info_t *)wireless_info;
+
+    printf("get wireless info\r\n");
+
+    if (info == NULL)
+        return -1;
+    do {
+        wifi_ap_record_t ap_info;
+        if (ESP_OK != esp_wifi_sta_get_ap_info(&ap_info))
+            return -1;
+        if (ap_info.rssi > 0) {
+            ap_info.rssi -= 128;
+        }
+        info->rssi = ap_info.rssi;
+    } while (0);
+
+    return 0;
+}
+
 hal_wifi_module_t sim_aos_wifi_eps32 = {
     .base.name           = "sim_aos_wifi_esp32",
     .init                =  wifi_init,
@@ -556,6 +588,7 @@ hal_wifi_module_t sim_aos_wifi_eps32 = {
     .register_wlan_mgnt_monitor_cb = register_wlan_mgnt_monitor_cb,
     .wlan_send_80211_raw_frame = wlan_send_80211_raw_frame,
 
+    .get_wireless_info   = get_wireless_info,
     /* mesh related */
     .mesh_register_cb    =  register_mesh_cb,
     .mesh_enable         =  mesh_enable,

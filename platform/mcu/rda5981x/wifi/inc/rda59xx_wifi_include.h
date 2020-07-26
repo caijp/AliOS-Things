@@ -173,6 +173,7 @@ typedef struct{
 typedef struct {
     r_u8 bssid[ETH_ALEN];
     r_u8 ssid[MAX_SSID_LEN];
+    r_u8 ssid_len;
     /* Refer to dna_wlan_sec_type_e */
     r_u8 channel;
     r_u8 secure;
@@ -186,6 +187,7 @@ typedef struct {
 
 extern r_s32 rda59xx_get_joined_AP(rda59xx_scan_result *bss);
 extern void rda5981_set_auth_timeout(r_u8 timeout_enable);
+extern void rda5981_set_sta_listen_interval(unsigned char interval);
 /****************************************ap************************************************/
 typedef struct {
     r_u8 mac[ETH_ALEN];

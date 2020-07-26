@@ -1,8 +1,12 @@
 from scons_util import *
 import subprocess
-import urllib
 from collections import OrderedDict
 from scons_upload import aos_upload
+
+try:
+    import urllib.request as urllib
+except ImportError:
+    import urllib
 
 def taskkill(host_os, aos_path, exec_name):
     info("Killing %s\n" % exec_name)
@@ -62,8 +66,8 @@ def un_tar(filename, path):
     try:
         tar = tarfile.open(filename)
         tar.extractall(path)
-    except Exception, err:
-        print("[ERROR]: %s" % err)
+    except Exception as err:
+        print(("[ERROR]: %s" % err))
         raise Exception
     finally:
         tar.close()
@@ -111,7 +115,7 @@ def update_launch(aos_path, target, port):
         for toolchain in boards[board]:
             # name = toolchain['name']
             command = toolchain['command'].replace('gcc', 'gdb')
-            if toolchain.has_key('path_specific'):
+            if 'path_specific' in toolchain:
                 gdb_path = '{}/bin/{}'.format(toolchain['path'], command)
             else:
                 gdb_path = '{}/{}/bin/{}'.format(toolchain['path'], host_os, command)
@@ -131,7 +135,7 @@ def update_launch(aos_path, target, port):
     try:
         with open(launch_path, 'r') as f:
             launch_file = json.load(f, object_pairs_hook=OrderedDict)
-    except IOError, e:
+    except IOError as e:
         error(e)
     
     new_launch = {}
@@ -159,7 +163,7 @@ def update_launch(aos_path, target, port):
 
     try:
         write_json(launch_path, new_launch)
-    except IOError, e:
+    except IOError as e:
         error(e)
 
 def _run_debug_cmd(target, aos_path, cmd_file, program_path=None, bin_dir=None, startclient=False, gdb_args=None):
@@ -175,11 +179,11 @@ def _run_debug_cmd(target, aos_path, cmd_file, program_path=None, bin_dir=None, 
     if not configs:
         error("Can not read flash configs from %s" % cmd_file)
 
-    if not configs.has_key('port'):
+    if 'port' not in configs:
         error("need PORT in debug config file: %s" % cmd_file)
 
     # upload firmware first
-    if configs.has_key('upload') and configs['upload'] == True:
+    if 'upload' in configs and configs['upload'] == True:
         if aos_upload(target, aos_path):
             error("Upload firmware error")
 
@@ -207,10 +211,10 @@ def _debug_app(target, aos_path, registry_file, program_path=None, bin_dir=None,
     ret = 0
 
     # Check elf exist
-    elf_file = os.path.join(aos_path, "out", target, "binary", "%s.elf" % target)
+    elf_file = os.path.join(program_path if program_path else aos_path, "out", target, "binary", "%s.elf" % target)
     if not os.path.exists(elf_file):
         error("Please build target[%s] first" % target)
-    
+
     # Get valid board from registry file
     registry_board = read_json(registry_file)
 
@@ -242,24 +246,28 @@ def _debug_app(target, aos_path, registry_file, program_path=None, bin_dir=None,
     return ret
 
 def aos_debug(target, work_path=None, bin_dir=None, startclient=False, gdb_args=None):
+    program_path = None
+
     if '@' not in target or len(target.split('@')) != 2:
         error("Target invalid!")
 
     if work_path:
-        aos_path = work_path
+        aos_path = os.environ.get("AOS_SDK_PATH")
+        if not aos_path or not os.path.isdir(aos_path):
+            error("Looks like AOS_SDK_PATH is not correctly set." )
+        program_path = os.getcwd()
     else:
         if os.path.isdir('./kernel/rhino') or os.path.isdir('./include/aos'):
             info("Currently in aos_sdk_path: '%s'\n" % os.getcwd())
             aos_path = os.getcwd()
         else:
             info("Not in aos_sdk_path, curr_path:'%s'\n" % os.getcwd())
-            aos_path = get_config_value('os_path')
-            if not aos_path:
-                error("aos_sdk is unavailable, please run 'aos new $prj_name'!")
+            aos_path = os.environ.get("AOS_SDK_PATH")
+            if not aos_path or not os.path.isdir(aos_path):
+                error("Looks like AOS_SDK_PATH is not correctly set." )
             else:
                 info("Load aos configs success, set '%s' as sdk path\n" % aos_path)
 
-    program_path = get_config_value('program_path')
     registry_file = os.path.split(os.path.realpath(__file__))[0] + '/debug/registry_board.json'
     if os.path.isfile(registry_file):
         ret = _debug_app(target, aos_path, registry_file, program_path, bin_dir, startclient, gdb_args)

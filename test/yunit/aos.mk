@@ -1,8 +1,12 @@
 NAME := yunit
 
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION := 0.0.1
-$(NAME)_SUMMARY :=
-$(NAME)_SOURCES     := yunit.c
+$(NAME)_VERSION    := 0.0.1
+$(NAME)_SUMMARY    := yunit framework
 
-GLOBAL_INCLUDES     += include
+$(NAME)_SOURCES += yts_main.c yunit.c
+
+$(NAME)_CFLAGS += -Wall -Werror
+
+# DO NOT DELETE, for RPM package
+RPM_INCLUDE_DIR := yunit

@@ -736,11 +736,11 @@ static void pwmout_update_cfgreg(pwmout_t* obj)
         *(obj->CFGR) = reg_val | lpg_field_ontime | lpg_field_period;
     } else if(PWM_6 == (PWMName)(obj->channel)){
         uint32_t reg_val = *(obj->CFGR) & ~(0xFF);
-        *(obj->CFGR) = reg_val | (obj->pulsewidth_ticks);//1~254 
+        *(obj->CFGR) = reg_val | (obj->pulsewidth_ticks);//1~254
     } else{
         //PWM_7
         uint32_t reg_val = *(obj->CFGR) & ~(0xFF);
-        *(obj->CFGR) = reg_val | (obj->pulsewidth_ticks);//1~254 
+        *(obj->CFGR) = reg_val | (obj->pulsewidth_ticks);//1~254
     }
 }
 static void pwmout_cfgreg(pwmout_t* obj)
@@ -766,11 +766,11 @@ static void pwmout_cfgreg(pwmout_t* obj)
         *(obj->CFGR) = reg_val | lpg_field_ontime | lpg_field_period;
     } else if(PWM_6 == (PWMName)(obj->channel)){
         uint32_t reg_val = *(obj->CFGR) & ~(0xFF);
-        *(obj->CFGR) = reg_val | (obj->pulsewidth_ticks);//1~254 
+        *(obj->CFGR) = reg_val | (obj->pulsewidth_ticks);//1~254
     } else{
         //PWM_7
         uint32_t reg_val = *(obj->CFGR) & ~(0xFF);
-        *(obj->CFGR) = reg_val | (obj->pulsewidth_ticks);//1~254 
+        *(obj->CFGR) = reg_val | (obj->pulsewidth_ticks);//1~254
     }
 }
 

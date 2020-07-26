@@ -1,8 +1,5 @@
-menuconfig AOS_COMP_YUNIT
-    bool "Integration Test Framework"
+config AOS_COMP_YUNIT
+    bool "yunit framework"
     default n
     help
 
-if AOS_COMP_YUNIT
-# Configurations for comp yunit
-endif

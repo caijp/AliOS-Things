@@ -45,16 +45,6 @@ $(error can not find compiler toolchain, please download $(TOOLCHIAN_FILE) from 
 endif
 endif
 
-ifeq ($(findstring stm32, $(HOST_MCU_FAMILY)), stm32)
-GDB_KILL_OPENOCD   = shell $(TOOLS_ROOT)/cmd/win32/taskkill /F /IM st-util.exe
-GDBINIT_STRING     = shell start /B $(TOOLS_ROOT)/cmd/win32/st-util.exe
-GDB_COMMAND        = $(call CONV_SLASHES, $(TOOLCHAIN_PATH))$(TOOLCHAIN_PREFIX)gdb$(EXECUTABLE_SUFFIX)
-else
-GDB_KILL_OPENOCD   = shell $(TOOLS_ROOT)/cmd/win32/taskkill /F /IM openocd.exe
-GDBINIT_STRING     = shell start /B $(OPENOCD_FULL_NAME) -f $(OPENOCD_CFG_PATH)interface/$(JTAG).cfg -f $(OPENOCD_CFG_PATH)$(HOST_OPENOCD)/$(HOST_OPENOCD).cfg -f $(OPENOCD_CFG_PATH)$(HOST_OPENOCD)/$(HOST_OPENOCD)_gdb_jtag.cfg -l $(OPENOCD_LOG_FILE)
-GDB_COMMAND        = cmd /C $(call CONV_SLASHES, $(TOOLCHAIN_PATH))$(TOOLCHAIN_PREFIX)gdb$(EXECUTABLE_SUFFIX)
-endif
-
 else  # Win32
 ifneq (,$(filter $(HOST_OS),Linux32 Linux64))
 ################
@@ -72,16 +62,6 @@ $(error can not find compiler toolchain, please download $(TOOLCHIAN_FILE) from 
 endif
 endif
 
-ifeq ($(findstring stm32, $(HOST_MCU_FAMILY)), stm32)
-GDB_KILL_OPENOCD   = 'shell killall st-util'
-GDBINIT_STRING     = 'shell $(COMMON_TOOLS_PATH)st-util &'
-GDB_COMMAND        = "$(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)gdb"
-else
-GDB_KILL_OPENOCD   = 'shell killall openocd'
-GDBINIT_STRING     = 'shell $(COMMON_TOOLS_PATH)dash -c "trap \\"\\" 2;$(OPENOCD_FULL_NAME) -f $(OPENOCD_CFG_PATH)interface/$(JTAG).cfg -f $(OPENOCD_CFG_PATH)$(HOST_OPENOCD)/$(HOST_OPENOCD).cfg -f $(OPENOCD_CFG_PATH)$(HOST_OPENOCD)/$(HOST_OPENOCD)_gdb_jtag.cfg -l $(OPENOCD_LOG_FILE) &"'
-GDB_COMMAND        = "$(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)gdb"
-endif
-
 else # Linux32/64
 ifeq ($(HOST_OS),OSX)
 ################
@@ -97,16 +77,6 @@ DOWNLOAD_URL   = "https://launchpad.net/gcc-arm-embedded/+download"
 TOOLCHIAN_FILE = "gcc-arm-none-eabi-5_4-2016q3-20160926-mac.tar.bz2"
 $(error can not find compiler toolchain, please download $(TOOLCHIAN_FILE) from $(DOWNLOAD_URL) and unzip to $(COMPILER_ROOT)/$(TOOLCHAIN_DEFAULT_FOLDER)/$(HOST_OS) folder)
 endif
-endif
-
-ifeq ($(findstring stm32, $(HOST_MCU_FAMILY)), stm32)
-GDB_KILL_OPENOCD   = 'shell killall st-util'
-GDBINIT_STRING     = 'shell $(COMMON_TOOLS_PATH)st-util &'
-GDB_COMMAND        = "$(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)gdb"
-else
-GDB_KILL_OPENOCD   = 'shell killall openocd_run'
-GDBINIT_STRING     = 'shell $(COMMON_TOOLS_PATH)dash -c "trap \\"\\" 2;$(OPENOCD_FULL_NAME) -f $(OPENOCD_CFG_PATH)interface/$(JTAG).cfg -f $(OPENOCD_CFG_PATH)$(HOST_OPENOCD)/$(HOST_OPENOCD).cfg -f $(OPENOCD_CFG_PATH)$(HOST_OPENOCD)/$(HOST_OPENOCD)_gdb_jtag.cfg -l $(OPENOCD_LOG_FILE) &"'
-GDB_COMMAND        = "$(TOOLCHAIN_PATH)$(TOOLCHAIN_PREFIX)gdb"
 endif
 
 else # OSX
@@ -149,25 +119,31 @@ ADD_COMPILER_SPECIFIC_STANDARD_CFLAGS   = $(1) -Wall -Wfatal-errors -fsigned-cha
 ADD_COMPILER_SPECIFIC_STANDARD_CXXFLAGS = $(1) -Wall -Wfatal-errors -fsigned-char -ffunction-sections -fdata-sections -fno-common -fno-rtti -fno-exceptions  $(if $(filter yes,$(MXCHIP_INTERNAL) $(TESTER)),-Werror)
 ADD_COMPILER_SPECIFIC_STANDARD_ADMFLAGS = $(1)
 COMPILER_SPECIFIC_OPTIMIZED_CFLAGS    := -Os
-COMPILER_SPECIFIC_UNOPTIMIZED_CFLAGS  := -O0
+COMPILER_SPECIFIC_UNOPTIMIZED_CFLAGS  := -Og
 COMPILER_SPECIFIC_PEDANTIC_CFLAGS  := $(COMPILER_SPECIFIC_STANDARD_CFLAGS) -Werror -Wstrict-prototypes  -W -Wshadow  -Wwrite-strings -pedantic -std=c99 -U__STRICT_ANSI__ -Wconversion -Wextra -Wdeclaration-after-statement -Wconversion -Waddress -Wlogical-op -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wmissing-declarations -Wmissing-field-initializers -Wdouble-promotion -Wswitch-enum -Wswitch-default -Wuninitialized -Wunknown-pragmas -Wfloat-equal  -Wundef  -Wshadow # -Wcast-qual -Wtraditional -Wtraditional-conversion
 COMPILER_SPECIFIC_ARFLAGS_CREATE   := -rcs
 COMPILER_SPECIFIC_ARFLAGS_ADD      := -rcs
 COMPILER_SPECIFIC_ARFLAGS_VERBOSE  := -v
 
-#debug: no optimize and log enable
+# debug: no optimize, full exception inspect and log enabled
 COMPILER_SPECIFIC_DEBUG_CFLAGS     := -DDEBUG -ggdb $(COMPILER_SPECIFIC_UNOPTIMIZED_CFLAGS)
 COMPILER_SPECIFIC_DEBUG_CXXFLAGS   := -DDEBUG -ggdb $(COMPILER_SPECIFIC_UNOPTIMIZED_CFLAGS)
 COMPILER_SPECIFIC_DEBUG_ASFLAGS    := -DDEBUG=1 -ggdb
 COMPILER_SPECIFIC_DEBUG_LDFLAGS    := -Wl,--gc-sections -Wl,--cref
 
-#release_log: optimize but log enable
+# inspect: optimize, full exception inspect and log enabled
+COMPILER_SPECIFIC_INSPECT_CFLAGS   := -DDEBUG -ggdb $(COMPILER_SPECIFIC_OPTIMIZED_CFLAGS)
+COMPILER_SPECIFIC_INSPECT_CXXFLAGS := -DDEBUG -ggdb $(COMPILER_SPECIFIC_OPTIMIZED_CFLAGS)
+COMPILER_SPECIFIC_INSPECT_ASFLAGS  := -DDEBUG=1 -ggdb
+COMPILER_SPECIFIC_INSPECT_LDFLAGS  := -Wl,--gc-sections -Wl,$(COMPILER_SPECIFIC_OPTIMIZED_CFLAGS) -Wl,--cref
+
+# release_log: optimize, minimal exception inspect and less log
 COMPILER_SPECIFIC_RELEASE_LOG_CFLAGS   := -ggdb $(COMPILER_SPECIFIC_OPTIMIZED_CFLAGS)
 COMPILER_SPECIFIC_RELEASE_LOG_CXXFLAGS := -ggdb $(COMPILER_SPECIFIC_OPTIMIZED_CFLAGS)
 COMPILER_SPECIFIC_RELEASE_LOG_ASFLAGS  := -ggdb
 COMPILER_SPECIFIC_RELEASE_LOG_LDFLAGS  := -Wl,--gc-sections -Wl,$(COMPILER_SPECIFIC_OPTIMIZED_CFLAGS) -Wl,--cref
 
-#release: optimize and log disable
+# release: optimize, and log, cli, exception inspect disabled
 COMPILER_SPECIFIC_RELEASE_CFLAGS   := -DNDEBUG -ggdb $(COMPILER_SPECIFIC_OPTIMIZED_CFLAGS)
 COMPILER_SPECIFIC_RELEASE_CXXFLAGS := -DNDEBUG -ggdb $(COMPILER_SPECIFIC_OPTIMIZED_CFLAGS)
 COMPILER_SPECIFIC_RELEASE_ASFLAGS  := -ggdb

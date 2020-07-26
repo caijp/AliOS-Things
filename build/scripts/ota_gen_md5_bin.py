@@ -20,52 +20,52 @@ def crc16A(dat):
     return crc
 
 def print_usage():
-    print ""
-    print "Usage: Merge a bin file into an exist bin file, create one if target is not exist"
-    print sys.argv[0]
-    print "Optional Usage:"
-    print " [-o] <target binary file>"
-    print " [-h | --help] Display usage"
-    print " [<input binary file>]"
+    print("")
+    print("Usage: Merge a bin file into an exist bin file, create one if target is not exist")
+    print(sys.argv[0])
+    print("Optional Usage:")
+    print(" [-o] <target binary file>")
+    print(" [-m] <image magic type>")
+    print(" [-h | --help] Display usage")
+    print(" [<input binary file>]")
     sys.stdout.flush()
 
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'o:h')
+        opts, args = getopt.getopt(sys.argv[1:], 'o:m:h')
     except getopt.GetoptError as err:
-        print str(err)
+        print(str(err))
         print_usage()
         sys.exit(2)
 
     OUTPUT_FILE = 0
-    if not len(args) == 1:
+    magic_str = "0xefefefef"
+    if not len(args) == 3:
         print_usage()
         sys.exit(2)
     else:
         INPUT_FILE = args[0]
-
     if not os.path.exists(INPUT_FILE):
-        print "Please input a binary file"
+        print("Please input a binary file")
         sys.exit(2)
-
     for opt, arg in opts:
         if opt == "-o":
-            OUTPUT_FILE = arg
+            OUTPUT_FILE = arg 
+        elif opt == "-m":
+            magic_str = arg
         elif opt == "-h":
             print_usage()
             sys.exit()
 
-    if OUTPUT_FILE == 0:
-        OUTPUT_FILE = re.sub(r'.bin$', '.md5.bin', INPUT_FILE)
-
+    OUTPUT_FILE = INPUT_FILE+".md5"
     fin = open(INPUT_FILE, 'rb')
     fout = open(OUTPUT_FILE, 'wb')
     data = fin.read()
     fout.write(data)
-    magic = bytearray([0xef,0xef,0xef,0xef])
+    magic = int(magic_str, 16)
     size = os.path.getsize(INPUT_FILE)
-    print size
-    fout.write(magic)
+    print(size)
+    fout.write(struct.pack('<I', magic))
     fout.write(struct.pack('<I', size))
     fout.write(hashlib.md5(data).digest())
     print(hashlib.md5(data).hexdigest())

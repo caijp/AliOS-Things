@@ -3,17 +3,17 @@
  */
 
 #include <fcntl.h>
-#include <fatfs_diskio.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <aos/kernel.h>
-#include <yunit.h>
-#include <yts.h>
 
+#include "aos/kernel.h"
 #include "aos/vfs.h"
 
-#include "fatfs.h"
+#include "yunit/yunit.h"
+#include "yunit/yts.h"
+
+#include "fs/fatfs.h"
 
 static const char *g_string         = "Fatfs test string.";
 static const char *g_filepath       = "/sdcard/test.txt";

@@ -4,7 +4,7 @@ NAME := mcu_RDA5981x
 HOST_OPENOCD := rda5981x
 
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION    := 1.0.0
+$(NAME)_VERSION    := 1.0.2
 $(NAME)_SUMMARY    := driver & sdk for platform/mcu RDA5981x
 
 $(NAME)_COMPONENTS += arch_armv7m
@@ -62,11 +62,12 @@ $(NAME)_SOURCES := startup/soc_init.c                    \
                    hal/uart.c                            \
                    hal/gpio.c                            \
                    hal/spi.c                             \
+                   hal/wdg.c                             \
                    hal/flash.c                           \
                    hal/rda_trng_api.c                    \
                    hal/wifi_port.c                       \
-                   hal/trng_api.c
-                   #hal/hal_pwm.c \
+                   hal/trng_api.c                        \
+                   hal/hal_pwm.c
 
 $(NAME)_SOURCES += cmsis/cmsis_nvic.c          \
                    driver/serial_api.c         \
@@ -88,3 +89,10 @@ $(NAME)_SOURCES += wifi/rda_sys_wrapper.c \
                    wifi/rda59xx_daemon.c  \
                    wifi/rda59xx_lwip.c
 $(NAME)_SOURCES += feature/sysdata/rda5981_sys_data.c
+
+$(NAME)_SOURCES +=  hal/pwrmgmt_hal/board_cpu_pwr.c \
+                    hal/pwrmgmt_hal/board_cpu_pwr_systick.c \
+                    hal/pwrmgmt_hal/board_lp_ticker.c
+
+EXTRA_TARGET_MAKEFILES += $($(HOST_MCU_FAMILY)_LOCATION)/gen_image_bin.mk
+

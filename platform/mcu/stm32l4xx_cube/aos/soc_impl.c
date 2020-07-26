@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 
+extern void hal_reboot(void);
+
 #if (RHINO_CONFIG_HW_COUNT > 0)
 #include "stm32l4xx_hal.h"
 #include "stm32l4xx_hal_tim.h"
@@ -54,12 +56,6 @@ float soc_hr_hw_freq_mhz(void)
 
 #endif /* RHINO_CONFIG_HW_COUNT */
 
-#if (RHINO_CONFIG_INTRPT_STACK_OVF_CHECK > 0)
-void soc_intrpt_stack_ovf_check(void)
-{
-}
-#endif
-
 #if (RHINO_CONFIG_MM_TLF > 0)
 
 #if defined (__CC_ARM) /* Keil / armcc */
@@ -104,7 +100,7 @@ void soc_err_proc(kstat_t err)
 {
     (void)err;
 
-    assert(0);
+    hal_reboot();
 }
 
 krhino_err_proc_t g_err_proc = soc_err_proc;

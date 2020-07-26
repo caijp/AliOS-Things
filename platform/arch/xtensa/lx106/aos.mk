@@ -1,7 +1,7 @@
 NAME := arch_xtensa_lx106
 
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION    := 1.0.0
+$(NAME)_VERSION    := 1.0.2
 $(NAME)_SUMMARY    := arch for xtensa_lx106
 
 $(NAME)_SOURCES := port.c         \
@@ -10,6 +10,5 @@ $(NAME)_SOURCES := port.c         \
                    xtensa_panic.S \
                    xtensa_vectors.S
 
-GLOBAL_INCLUDES += .            \
-                   ./include    \
-                   ./include/frxt
+GLOBAL_INCLUDES += include    \
+                   include/frxt

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "cutest/cut.h"
+#include "aos/kernel.h"
 
 #ifndef SYSINFO_ARCH
 #define SYSINFO_ARCH        ""
@@ -15,6 +16,9 @@
 #endif
 #ifndef SYSINFO_DEVICE_NAME
 #define SYSINFO_DEVICE_NAME ""
+#endif
+#ifndef SYSINFO_KERNEL_VERSION
+#define SYSINFO_KERNEL_VERSION "unknown"
 #endif
 #ifndef SYSINFO_APP_VERSION
 #define SYSINFO_APP_VERSION ""
@@ -78,7 +82,7 @@ static int dump_test_config(void)
         PRINT_CONFIG(SYSINFO_MCU);
         PRINT_CONFIG(SYSINFO_DEVICE_NAME);
         PRINT_CONFIG(SYSINFO_KERNEL);
-        PRINT_CONFIG(aos_version_get());
+        PRINT_CONFIG(SYSINFO_KERNEL_VERSION);
         PRINT_CONFIG(SYSINFO_APP_VERSION);
     }
 
@@ -499,12 +503,16 @@ static kqueue_t g_queue[3];
 /* task: g_queue[0] -> g_queue[1] */
 static void task5(void *arg)
 {
-    int *recv = NULL;
+    int     *recv;
+    kstat_t  ret;
 
     while(1) {
-        krhino_queue_recv(&g_queue[0], RHINO_WAIT_FOREVER, (void**)&recv);
-        krhino_queue_back_send(&g_queue[1], recv);
-        if(*recv == TEST_CONFIG_SYNC_TIMES) {
+        recv = NULL;
+        ret = krhino_queue_recv(&g_queue[0], RHINO_WAIT_FOREVER, (void**)&recv);
+        ASSERT_EQ(ret, RHINO_SUCCESS);
+        ret = krhino_queue_back_send(&g_queue[1], recv);
+        ASSERT_EQ(ret, RHINO_SUCCESS);
+        if((recv != NULL) && (*recv == TEST_CONFIG_SYNC_TIMES)) {
             break;
         }
     }
@@ -514,12 +522,16 @@ static void task5(void *arg)
 /* task: g_queue[1] -> g_queue[2] */
 static void task6(void *arg)
 {
-    int *recv = NULL;
+    int     *recv;
+    kstat_t  ret;
 
     while(1) {
-        krhino_queue_recv(&g_queue[1], RHINO_WAIT_FOREVER, (void**)&recv);
+        recv = NULL;
+        ret = krhino_queue_recv(&g_queue[1], RHINO_WAIT_FOREVER, (void**)&recv);
+        ASSERT_EQ(ret, RHINO_SUCCESS);
         krhino_queue_back_send(&g_queue[2], recv);
-        if(*recv == TEST_CONFIG_SYNC_TIMES) {
+        ASSERT_EQ(ret, RHINO_SUCCESS);
+        if((recv != NULL) && (*recv == TEST_CONFIG_SYNC_TIMES)) {
             break;
         }
     }

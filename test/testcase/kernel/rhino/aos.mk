@@ -6,7 +6,7 @@ $(NAME)_SUMMARY    := test for rhino core
 
 $(NAME)_COMPONENTS += rhino
 
-GLOBAL_INCLUDES += ./
+$(NAME)_INCLUDES += ./
 
 ifeq ($(COMPILER),)
 $(NAME)_CFLAGS += -Wall -Werror -Wno-unused-variable -Wno-unused-parameter -Wno-implicit-function-declaration
@@ -81,8 +81,6 @@ $(NAME)_SOURCES := test_fw.c                             \
                    core/timer/timer_test.c               \
                    core/workqueue/workqueue_test.c       \
                    core/workqueue/workqueue_interface.c  \
-                   core/ringbuf/ringbuf_break.c          \
-                   core/ringbuf/ringbuf_test.c           \
                    core/combination/comb_test.c          \
                    core/combination/sem_event.c          \
                    core/combination/sem_queue_buf.c      \

@@ -2,13 +2,14 @@
  * Copyright (C) 2015-2017 Alibaba Group Holding Limited
  */
 
-#include <aos/kernel.h>
 #include "aos/kernel.h"
 #include "aos/yloop.h"
+
 #include "network/hal/base.h"
 #include <hal/wifi.h>
-#include <yunit.h>
-#include <yts.h>
+
+#include "yunit/yunit.h"
+#include "yunit/yts.h"
 
 #include "netmgr.h"
 
@@ -34,7 +35,7 @@ static int events_executor(input_event_t *eventinfo, void *cb_para, int flag)
         case CODE_WIFI_ON_GOT_IP:
             done_flag |= flag;
             netmgr_deinit();
-            wifi_get_ip(ips);
+            netmgr_wifi_get_ip(ips);
             return 0;
     }
     return -1;

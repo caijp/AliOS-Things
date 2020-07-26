@@ -2,20 +2,20 @@ NAME := mcu_stm32l4xx_cube
 
 HOST_OPENOCD := stm32l4xx
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION    := 1.0.0
+$(NAME)_VERSION    := 1.0.2
 $(NAME)_SUMMARY    := driver & sdk for platform/mcu stm32l4xx_cube
 
-ifeq ($(AOS_2BOOT_SUPPORT), yes)
-$(NAME)_LIBSUFFIX := _2boot
+ifeq ($(AOS_2NDBOOT_SUPPORT), yes)
+$(NAME)_LIBSUFFIX := _2ndboot
 
-$(NAME)_COMPONENTS += ota_2nd_boot
+$(NAME)_COMPONENTS += bootloader
 
-GLOBAL_INCLUDES := Rec/
+GLOBAL_INCLUDES := hal/2ndboot
 
-$(NAME)_SOURCES := Rec/rec_flash.c             \
-		           Rec/rec_uart.c              \
-		           Rec/rec_sys.c               \
-		           Rec/rec_wdt.c
+$(NAME)_SOURCES := hal/2ndboot/flash.c             \
+		   hal/2ndboot/uart.c              \
+		   hal/2ndboot/sys.c               \
+		   hal/2ndboot/wdg.c
 
 GLOBAL_CFLAGS += -mcpu=cortex-m4 \
                  -mlittle-endian \
@@ -34,16 +34,21 @@ GLOBAL_LDFLAGS += -mcpu=cortex-m4  \
 
 else
 
-$(NAME)_COMPONENTS += arch_armv7m
-$(NAME)_COMPONENTS += newlib_stub rhino
+$(NAME)_COMPONENTS-$(ENABLE_USPACE) += arch_armv7m-mk
+$(NAME)_COMPONENTS-$(!ENABLE_USPACE) += arch_armv7m
+
+$(NAME)_COMPONENTS += newlib_stub rhino osal_aos
 
 GLOBAL_DEFINES += USE_HAL_DRIVER
 
 GLOBAL_INCLUDES += Drivers/STM32L4xx_HAL_Driver/Inc        \
                    Drivers/STM32L4xx_HAL_Driver/Inc/Legacy \
-                   Drivers/CMSIS/Include                   \
                    Drivers/CMSIS/Device/ST/STM32L4xx/Include \
                    Rec/
+
+ifneq ($(CONFIG_UAI_USE_CMSIS_NN), y)
+GLOBAL_INCLUDES += Drivers/CMSIS/Include
+endif
 
 $(NAME)_SOURCES := Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.c               \
                    Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_adc.c           \
@@ -137,13 +142,8 @@ $(NAME)_SOURCES := Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.c             
                    Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_utils.c          \
                    Drivers/CMSIS/Device/ST/STM32L4xx/Source/Templates/system_stm32l4xx.c
 
-ifeq ($(AOS_DEVELOPERKIT_ENABLE_OTA),1)
-$(NAME)_SOURCES += Rec/rec_clear_ota_flag.c
-endif
-
 $(NAME)_SOURCES += aos/soc_impl.c          \
                    aos/hook_impl.c         \
-                   aos/aos.c               \
                    aos/rttest_impl.c       \
                    hal/hal_uart_stm32l4.c  \
                    hal/hw.c                \
@@ -157,6 +157,15 @@ $(NAME)_SOURCES += aos/soc_impl.c          \
                    hal/hal_qspi_stm32l4.c  \
                    hal/hal_nand_stm32l4.c  \
                    hal/hal_nor_stm32l4.c
+
+$(NAME)_SOURCES +=hal/pwrmgmt_hal/board_cpu_pwr.c         \
+                  hal/pwrmgmt_hal/board_cpu_pwr_rtc.c     \
+                  hal/pwrmgmt_hal/board_cpu_pwr_systick.c \
+                  hal/pwrmgmt_hal/board_cpu_pwr_timer.c
+
+ifneq ($(RHINO_CONFIG_USER_SPACE),y)
+$(NAME)_SOURCES += aos/aos.c
+endif
 
 ifeq ($(COMPILER),armcc)
 GLOBAL_CFLAGS   += --c99 --cpu=Cortex-M4 --apcs=/hardfp --fpu=vfpv4_sp_d16 -D__MICROLIB -g --split_sections
@@ -172,7 +181,7 @@ GLOBAL_CFLAGS += -mcpu=cortex-m4           \
                  -mfpu=fpv4-sp-d16         \
                  -w
 GLOBAL_CFLAGS  += -D__VFP_FP__
-GLOBAL_CXXFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
+GLOBAL_CXXFLAGS += -mcpu=cortex-m4 -mlittle-endian -mthumb -mthumb-interwork -mfloat-abi=hard -mfpu=fpv4-sp-d16
 endif
 
 ifeq ($(COMPILER),armcc)

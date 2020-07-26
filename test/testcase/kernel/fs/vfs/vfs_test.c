@@ -8,10 +8,10 @@
 
 #include "aos/kernel.h"
 
-#include "yunit.h"
+#include "yunit/yunit.h"
 
-#include "vfs_api.h"
 #include "vfs_types.h"
+#include "vfs_api.h"
 
 #define VFS_FUNC_ATTACH 10001
 
@@ -39,7 +39,7 @@ static int32_t vfs_test_write(vfs_file_t *fp, const char *buf, uint32_t len)
     return VFS_FUNC_ATTACH;
 }
 
-static uint32_t vfs_test_lseek(vfs_file_t *fp, uint32_t off, int32_t whence)
+static uint32_t vfs_test_lseek(vfs_file_t *fp, int64_t off, int32_t whence)
 {
     return VFS_FUNC_ATTACH;
 }

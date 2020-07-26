@@ -1,13 +1,14 @@
 NAME := arch_armv6m
 
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION    := 1.0.0
+$(NAME)_VERSION    := 1.0.2
 $(NAME)_SUMMARY    := arch for armv6m
 
 $(NAME)_SOURCES := common/panic_c.c
 $(NAME)_SOURCES += common/port_c.c
+$(NAME)_SOURCES += common/backtrace.c
 
-GLOBAL_INCLUDES += common/
+GLOBAL_INCLUDES += include
 
 ifeq ($(COMPILER),armcc)
 GLOBAL_ASMFLAGS += --cpreproc

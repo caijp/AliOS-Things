@@ -5,11 +5,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <aos/kernel.h>
 #include "aos/kernel.h"
 
-#include <yunit.h>
-#include <yts.h>
+#include "yunit/yunit.h"
+#include "yunit/yts.h"
+
 #include "ota_transport.h"
 extern void ota_service_event(input_event_t *event, void *priv_data);
 extern void ota_check_update(const char *buf, int len);

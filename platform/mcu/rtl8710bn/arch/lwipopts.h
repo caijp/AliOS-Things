@@ -36,8 +36,14 @@
 /**
  * Loopback demo related options.
  */
+#ifdef CONFIG_AOS_MESH
+#define LWIP_NETIF_LOOPBACK             0
+#define LWIP_HAVE_LOOPIF                0
+#else
 #define LWIP_NETIF_LOOPBACK             1
 #define LWIP_HAVE_LOOPIF                1
+#endif
+
 #define LWIP_NETIF_LOOPBACK_MULTITHREADING       1
 #define LWIP_LOOPBACK_MAX_PBUFS         8
 
@@ -55,7 +61,7 @@
 /* Disable lwIP asserts */
 #define LWIP_NOASSERT			1
 
-//#define LWIP_DEBUG                    1
+#define LWIP_DEBUG                      0
 //#define LWIP_DEBUG_TRACE              1
 #define SOCKETS_DEBUG                   LWIP_DBG_OFF // | LWIP_DBG_MASK_LEVEL
 
@@ -91,6 +97,12 @@
 #define SNMP_MSG_DEBUG                  LWIP_DBG_OFF
 #define SNMP_MIB_DEBUG                  LWIP_DBG_OFF
 #define DNS_DEBUG                       LWIP_DBG_OFF
+#define PKTPRINT_DEBUG                  LWIP_DBG_OFF
+#define IPERF_DEBUG                     LWIP_DBG_OFF
+#define PING_DEBUG                      LWIP_DBG_OFF
+#define PKTPRINT_DEBUG                  LWIP_DBG_OFF
+#define IPERF_DEBUG                     LWIP_DBG_OFF
+#define PING_DEBUG                      LWIP_DBG_OFF
 //#define LWIP_COMPAT_MUTEX      		1
 /**
  * SYS_LIGHTWEIGHT_PROT==1: if you want inter-task protection for certain
@@ -234,7 +246,12 @@
  * LWIP_RAW==1: Enable application layer to hook into the IP layer itself.
  */
 #define LWIP_RAW                        1
+
+#ifdef CONFIG_AOS_MESH
+#define LWIP_IPV6                       1
+#else
 #define LWIP_IPV6                       0
+#endif
 
 /* Enable IPv4 Auto IP	*/
 #ifdef CONFIG_AUTOIP
@@ -268,6 +285,11 @@
  * Enable TCP_KEEPALIVE
  */
 #define LWIP_TCP_KEEPALIVE              1
+
+/**
+ * TCP_SYNMAXRTX: Maximum number of retransmissions of SYN segments.
+ */
+#define TCP_SYNMAXRTX                   10
 
 /*
    ----------------------------------------

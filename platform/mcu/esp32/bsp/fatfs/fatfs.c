@@ -4,11 +4,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/fcntl.h>
-#include "fatfs.h"
-#include "fatfs_diskio.h"
-#include "ff.h"
 
 #include "aos/vfs.h"
+
+#include "fs/fatfs.h"
+
+#include "fatfs_diskio.h"
+#include "ff.h"
 
 #if FF_USE_LFN == 0
 #define MAX_NAME_LEN 12

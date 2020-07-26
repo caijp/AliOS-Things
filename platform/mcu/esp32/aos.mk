@@ -3,10 +3,10 @@ HOST_OPENOCD := esp32
 NAME := mcu_esp32
 
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION    := 1.0.0
+$(NAME)_VERSION    := 1.0.2
 $(NAME)_SUMMARY    := driver & sdk for platform/mcu esp32
 
-$(NAME)_COMPONENTS += lwip alicrypto imbedtls netmgr
+$(NAME)_COMPONENTS += lwip netmgr mbedtls
 
 ESP_INC_PATH    := bsp/include
 GLOBAL_INCLUDES += $(ESP_INC_PATH)
@@ -21,6 +21,7 @@ GLOBAL_INCLUDES += $(ESP_INC_PATH)/spi_flash/include
 GLOBAL_INCLUDES += $(ESP_INC_PATH)/container/include
 GLOBAL_INCLUDES += $(ESP_INC_PATH)/app_update/include
 
+GLOBAL_CFLAGS  += -DOTA_DUBANK
 GLOBAL_CFLAGS  += -ffunction-sections -fdata-sections -fstrict-volatile-bitfields -mlongcalls -DESPOS_FOR_ESP32
 GLOBAL_LDFLAGS += -nostdlib -Lplatform/mcu/esp32/ -lc
 GLOBAL_LDFLAGS += -lgcc -lstdc++ -lgcov -lm
@@ -42,7 +43,7 @@ $(NAME)_SOURCES += hal/uart.c
 $(NAME)_SOURCES += hal/flash.c
 $(NAME)_SOURCES += hal/wifi_port.c
 $(NAME)_SOURCES += bsp/heap_oram.c
-ifeq ($(ble),1)
+ifneq ($(EN_BLE_HOST),)
 $(NAME)_SOURCES += hal/ble_port.c
 endif
 $(NAME)_SOURCES += hal/misc.c
@@ -51,10 +52,6 @@ $(NAME)_SOURCES += hal/gpio.c
 $(NAME)_SOURCES += hal/pwm.c
 $(NAME)_SOURCES += bsp/tcpip_adapter_lwip.c bsp/wlanif.c
 $(NAME)_CFLAGS  := -std=gnu99
-
-ifeq ($(bt_mesh), 1)
-$(NAME)_SOURCES += hal/mesh_bt_hal.c
-endif
 
 ESP_LIB_CORE_TYPE =
 ESP_LIB_SRAM =
@@ -124,16 +121,9 @@ $(NAME)_SOURCES          += aos/soc_impl.c
 $(NAME)_SOURCES          += aos/heap_wrapper.c
 endif
 
-mesh               ?= 0
-ifneq ($(mesh),0)
-$(NAME)_COMPONENTS += umesh
-endif
+$(NAME)_COMPONENTS-$((EN_BLE_HOST&&!bt_mesh_standalone_deploy)) += bt_host
 
-ble                      ?= 0
-ifneq ($(ble),0)
-ifneq ($(bt_mesh_standalone_deploy),1)
-$(NAME)_COMPONENTS       += bt_host
-endif
+ifneq ($(EN_BLE_HOST),)
 GLOBAL_INCLUDES          += $(ESP_INC_PATH)/bt/include
 ifneq ($(hci_h4),1)
 $(NAME)_SOURCES          += ble_hci_driver/hci_driver.c
@@ -170,3 +160,6 @@ GLOBAL_INCLUDES     += bsp/fatfs/include bsp/fatfs/ff/include
 GLOBAL_DEFINES      += AOS_FATFS
 
 include platform/mcu/esp32/espos/espos.mk
+
+EXTRA_TARGET_MAKEFILES += $($(HOST_MCU_FAMILY)_LOCATION)/gen_image_bin.mk
+

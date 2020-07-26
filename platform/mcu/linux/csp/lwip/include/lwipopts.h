@@ -218,6 +218,8 @@
 #define LWIP_SO_RCVTIMEO                1
 #define SO_REUSE                        1
 
+#define LWIP_NETIF_API                  1
+
 /*
    ---------- Statistics options ----------
 */
@@ -274,6 +276,9 @@
 #define TCP_FR_DEBUG                    LWIP_DBG_ON
 #define TCP_QLEN_DEBUG                  LWIP_DBG_ON
 #define TCP_RST_DEBUG                   LWIP_DBG_ON
+#define PKTPRINT_DEBUG                  LWIP_DBG_OFF
+#define IPERF_DEBUG                     LWIP_DBG_OFF
+#define PING_DEBUG                      LWIP_DBG_OFF
 
 /*
    ---------- Performance tracking options ----------

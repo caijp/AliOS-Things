@@ -1,15 +1,18 @@
 #include <stdio.h>
 #include "k_api.h"
-#include "debug_api.h"
 #include "backtrace.h"
 #include "frxt/xtensa_api.h"
+
+#ifdef AOS_COMP_DEBUG
+#include "debug_api.h"
+#endif
 
 //#define PANIC_PRINT     ets_printf
 #define PANIC_PRINT     printf
 
 extern int printf(const char *fmt, ...);
 extern int ets_printf(const char *fmt, ...);
-#if (DEBUG_CONFIG_PANIC > 0)
+#ifdef AOS_COMP_DEBUG
 extern volatile uint32_t g_crash_steps;
 #endif
 
@@ -20,7 +23,7 @@ int print_str(const char *fmt, ...)
 
     strncpy(prt_info, fmt, sizeof(prt_info));
     prt_info[127] = '\0';
-    
+
     return PANIC_PRINT(prt_info);
 }
 
@@ -66,32 +69,18 @@ void panicGetCtx(void *context, char **pPC, char **pLR, int **pSP)
     *pSP = (int *)regs[4];
 }
 
-int panicBacktraceCaller(char *PC, int *SP,
-                         int (*print_func)(const char *fmt, ...))
-{
-    return 0;
-}
-
-int panicBacktraceCallee(char *PC, int *SP, char *LR,
-                         int (*print_func)(const char *fmt, ...))
-{
-    backtraceContext(PC, LR, SP, print_func);
-    return 1;
-}
-
 void xtensaPanic(void *context)
 {
     vPortETSIntrLock();
     krhino_sched_disable();
 
-#if (DEBUG_CONFIG_PANIC > 0)
+#ifdef AOS_COMP_DEBUG
     if(g_crash_steps == 0x87654321) {
         while (1);
     }
 
     g_crash_steps++;
     if (g_crash_steps > 1) {
-        print_str("double exception occur!\n");
         context = NULL;
     }
 

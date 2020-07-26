@@ -74,17 +74,22 @@ void wifi_cbfu(WIFI_RSP *msg)
     u8 dhcpen;
     u8 mac[6];
     u8 ipv4[4];
+    int wifi_strength, channel;
+    u8 ssidlen = 32;
 
     uip_ip4addr_t ipaddr, submask, gateway, dnsserver;
     s8 ret;
     char ipstr[16];
-    hal_wifi_ip_stat_t ipstat;
-    
+    hal_wifi_ip_stat_t ipstat = {0};
+    hal_wifi_ap_info_adv_t info = {0};
+
     if(msg->wifistatus == 1) {
         LOG_AOS_HAL("wifi connected:%d\n", msg->id);
         get_ip_stat(&sim_aos_wifi_icomm, &ipstat, STATION);
         sim_aos_wifi_icomm.ev_cb->stat_chg(&sim_aos_wifi_icomm, NOTIFY_STATION_UP, NULL);
         sim_aos_wifi_icomm.ev_cb->ip_got(&sim_aos_wifi_icomm, &ipstat, NULL);
+        get_connectap_info(0, info.ssid, &ssidlen, info.bssid, 6, (u8 *)&wifi_strength, (u8 *)&(info.channel));
+        sim_aos_wifi_icomm.ev_cb->para_chg(&sim_aos_wifi_icomm, &info, NULL, 0, NULL);
     }
     else {
         LOG_AOS_HAL("wifi disconnected:%d\n", msg->id);
@@ -97,10 +102,10 @@ void scan_cp()
     int i;
     TAG_AP_INFO *tmpap;
     hal_wifi_scan_result_t aplist;
-    
-	if (sim_aos_wifi_icomm.ev_cb == NULL)	
-        return; 
-    if (sim_aos_wifi_icomm.ev_cb->scan_compeleted == NULL)      
+
+	if (sim_aos_wifi_icomm.ev_cb == NULL)
+        return;
+    if (sim_aos_wifi_icomm.ev_cb->scan_compeleted == NULL)
         return;
 
     aplist.ap_num = get_ap_lsit_total_num();
@@ -114,16 +119,16 @@ void scan_cp()
         memcpy(aplist.ap_list[i].ssid, tmpap[i].name, tmpap[i].name_len);
     }
     OS_MemFree(tmpap);
-    
+
     sim_aos_wifi_icomm.ev_cb->scan_compeleted(&sim_aos_wifi_icomm, (hal_wifi_scan_result_t*)&aplist, NULL);
-    
+
     OS_MemFree(aplist.ap_list);
 }
 
 u8 enctypeicommtoali(u8 type, u8 subtype)
 {
     u8 enctype;
-    
+
     if(type == NONE)
         enctype = SECURITY_TYPE_NONE;
     else if(type == WEP)
@@ -148,7 +153,7 @@ u8 enctypeicommtoali(u8 type, u8 subtype)
 u8 enctypealitoicomm(u8 type)
 {
     u8 enctype = SECURITY_TYPE_NONE;
-    
+
     if(type == SECURITY_TYPE_NONE)
         enctype = NET80211_CRYPT_NONE;
     else if(type == SECURITY_TYPE_WEP)
@@ -170,10 +175,10 @@ void scan_cpadv()
     int i;
     TAG_AP_INFO *tmpap;
     hal_wifi_scan_result_adv_t aplist;
-    
-	if (sim_aos_wifi_icomm.ev_cb == NULL)		
-        return; 
-    if (sim_aos_wifi_icomm.ev_cb->scan_compeleted == NULL)      
+
+	if (sim_aos_wifi_icomm.ev_cb == NULL)
+        return;
+    if (sim_aos_wifi_icomm.ev_cb->scan_compeleted == NULL)
         return;
 
     aplist.ap_num = get_ap_lsit_total_num();
@@ -192,22 +197,25 @@ void scan_cpadv()
     OS_MemFree(tmpap);
 
 	sim_aos_wifi_icomm.ev_cb->scan_adv_compeleted(&sim_aos_wifi_icomm, (hal_wifi_scan_result_adv_t*)&aplist, NULL);
-    
+
     OS_MemFree(aplist.ap_list);
 }
 
 //Need to modify this api for new parameter
 void alisniffercb(packetinfo *pinfo)
 {
+    monitor_data_cb_t fn = NULL;
     hal_wifi_link_info_t info;
     OS_DeclareCritical();
     OS_EnterCritical();
-    if(gallpktfn != NULL)
+    fn = gallpktfn;
+    OS_ExitCritical();
+
+    if(fn != NULL)
     {
         info.rssi = -(pinfo->rssi);
-        gallpktfn(pinfo->data, pinfo->len, &info);
+        fn(pinfo->data, pinfo->len, &info);
     }
-    OS_ExitCritical();
 }
 void alimgmtcb(packetinfo *pinfo)
 {
@@ -236,10 +244,10 @@ static int wifi_start(hal_wifi_module_t *m, hal_wifi_init_type_t *init_para)
 {
     u32 ipaddr, submask, gateway, dnsserver;
     int ret;
-    
+
     if(init_para == NULL)
         return -1;
-    
+
     if(init_para->wifi_mode == SOFT_AP){
         DUT_wifi_start(DUT_AP);
     }
@@ -254,7 +262,7 @@ static int wifi_start(hal_wifi_module_t *m, hal_wifi_init_type_t *init_para)
             dnsserver = ipaddr_addr(init_para->dns_server_ip_addr);
             set_if_config_2(0, 0, ipaddr, submask, gateway, dnsserver);
         }
-        
+
         ret = set_wifi_config_3(0, (u8 *)init_para->wifi_ssid, strlen(init_para->wifi_ssid), (u8 *)init_para->wifi_key, strlen(init_para->wifi_key), NULL, 6, NET80211_CRYPT_UNKNOWN);
         if(ret == 0) {
             wifi_connect_2(0, wifi_cbfu);
@@ -271,13 +279,13 @@ int wifi_start_adv(hal_wifi_module_t *m, hal_wifi_init_type_adv_t *init_para_adv
     int ret, i;
     u8 apnum;
     TAG_AP_INFO *tmpap;
-    
+
     LOG_AOS_HAL("wifi_start_adv!!\n");
     if(init_para_adv == NULL)
         return -1;
-    
+
     DUT_wifi_start(DUT_STA);
-    
+
     if(init_para_adv->dhcp_mode == DHCP_SERVER){
         return -1;
     }else if(init_para_adv->dhcp_mode == DHCP_DISABLE){
@@ -287,7 +295,7 @@ int wifi_start_adv(hal_wifi_module_t *m, hal_wifi_init_type_adv_t *init_para_adv
         dnsserver = ipaddr_addr(init_para_adv->dns_server_ip_addr);
         set_if_config_2(0, 0, ipaddr, submask, gateway, dnsserver);
     }
-    
+
     apnum = get_ap_lsit_total_num();
     tmpap = OS_MemAlloc(apnum * sizeof(TAG_AP_INFO));
     get_ap_list(tmpap, &apnum);
@@ -312,18 +320,18 @@ int wifi_start_adv(hal_wifi_module_t *m, hal_wifi_init_type_adv_t *init_para_adv
     OS_MemFree(tmpap);
 
     if(i != apnum) {
-        set_wifi_config_3(0, (u8 *)init_para_adv->ap_info.ssid, strlen(init_para_adv->ap_info.ssid), (u8 *)init_para_adv->key, init_para_adv->key_len, 
+        set_wifi_config_3(0, (u8 *)init_para_adv->ap_info.ssid, strlen(init_para_adv->ap_info.ssid), (u8 *)init_para_adv->key, init_para_adv->key_len,
             (u8 *)init_para_adv->ap_info.bssid, 6, enctypealitoicomm(init_para_adv->ap_info.security));
         wifi_connect_2(0, wifi_cbfu);
     }else {
-/*        wifi_connect_active_3 (init_para_adv->ap_info.ssid, strlen(init_para_adv->ap_info.ssid), init_para_adv->key, init_para_adv->key_len, 
+/*        wifi_connect_active_3 (init_para_adv->ap_info.ssid, strlen(init_para_adv->ap_info.ssid), init_para_adv->key, init_para_adv->key_len,
             enctypealitoicomm(init_para_adv->ap_info.security), init_para_adv->ap_info.channel, init_para_adv->ap_info.bssid, wifirspcbfunc);*/
     }
     return 0;
 }
 
 typedef union icomm_ip4addr {
-  u8  u8[4];			
+  u8  u8[4];
   u16 u16[2];
   u32 u32;
 } icomm_ip4addr;
@@ -366,14 +374,16 @@ static int get_link_stat(hal_wifi_module_t *m, hal_wifi_link_stat_t *out_stat)
     LOG_AOS_HAL("get_link_stat!!\n");
     if(out_stat == NULL)
         return -1;
-    
+
     out_stat->is_connected = get_wifi_status_2(0);
     if(out_stat->is_connected == 1)
     {
         //Need to use new channel information.
         get_connectap_info(0, out_stat->ssid, &ssidlen, out_stat->bssid, 6, (u8 *)&(out_stat->wifi_strength), (u8 *)&(out_stat->channel));
         out_stat->wifi_strength = -out_stat->wifi_strength;
-    }
+    
+
+}
 	return 0;
 }
 
@@ -492,7 +502,7 @@ static int wlan_send_80211_raw_frame(hal_wifi_module_t *m, uint8_t *buf, int len
     //LOG_AOS_HAL("wlan_send_80211_raw_frame!!\n");
     if(buf == NULL || len <= 0)
         return -1;
-    
+
     ret = mac_80211_tx_rawpkt(buf, len);
     return ret; // len-4=exclude FCS
 }
@@ -518,6 +528,33 @@ void stop_debug_mode(hal_wifi_module_t *m)
 {
 }
 
+static int get_wireless_info(hal_wifi_module_t *m, void *wireless_info)
+{
+    int chan;
+    char bssid[6];
+
+    int rssi = -1;
+    int ssidlen = 32;
+    char ssid[32 + 1];
+    hal_wireless_info_t *info = (hal_wireless_info_t *)wireless_info;
+
+    printf("get wireless info\r\n");
+
+    if (info == NULL)
+        return -1;
+
+    if (get_wifi_status() == 1) {
+        get_connectap_info(0, ssid, &ssidlen, bssid, 6, (u8 *)&rssi, (u8 *)&chan);
+        if (rssi > 0) {
+            if (rssi >= 128) rssi = 127;
+            rssi -= 128;
+        }
+        info->rssi = rssi;
+        return 0;
+    }
+
+    return -1;
+}
 
 hal_wifi_module_t sim_aos_wifi_icomm = {
     .base.name           = "sim_aos_wifi_icomm",
@@ -541,6 +578,7 @@ hal_wifi_module_t sim_aos_wifi_icomm = {
     .register_wlan_mgnt_monitor_cb = register_wlan_mgnt_monitor_cb,
     .wlan_send_80211_raw_frame = wlan_send_80211_raw_frame,
     .start_debug_mode = start_debug_mode,
-    .stop_debug_mode = stop_debug_mode
+    .stop_debug_mode = stop_debug_mode,
+    .get_wireless_info   = get_wireless_info,
 };
 

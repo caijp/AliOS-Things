@@ -11,8 +11,8 @@
 
 #include "saml21.h"
 #include "driver_init.h"
-#include "atcmd_config_platform.h"
 
+#define AT_UART_PORT 0
 
 uart_dev_t uart_0 =
 {
@@ -77,4 +77,9 @@ int32_t hal_uart_recv_II(uart_dev_t *uart, void *data, uint32_t expect_size, uin
         stdio_io_read((const uint8_t *)data, expect_size);
     }
     return 0;
+}
+
+int32_t hal_uart_finalize(uart_dev_t *uart)
+{
+   return 0;
 }

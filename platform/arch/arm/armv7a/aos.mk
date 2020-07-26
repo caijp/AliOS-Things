@@ -1,7 +1,7 @@
 NAME := arch_armv7a
 
 $(NAME)_MBINS_TYPE := kernel
-$(NAME)_VERSION    := 1.0.0
+$(NAME)_VERSION    := 1.0.2
 $(NAME)_SUMMARY    := arch for armv7a
 
 $(NAME)_SOURCES := common/k_vector.c
@@ -9,7 +9,10 @@ $(NAME)_SOURCES += common/k_cache.c
 $(NAME)_SOURCES += common/k_mmu_sd.c
 $(NAME)_SOURCES += common/panic.c
 $(NAME)_SOURCES += common/port_c.c
-GLOBAL_INCLUDES += common
+
+$(NAME)_INCLUDES += common/include
+
+GLOBAL_INCLUDES += include
 
 ifeq ($(COMPILER),armcc)
 

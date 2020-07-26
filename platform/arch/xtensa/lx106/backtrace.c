@@ -1,3 +1,5 @@
+#ifdef AOS_COMP_DEBUG
+
 #include <stdio.h>
 #include "k_api.h"
 #include "debug_api.h"
@@ -51,7 +53,7 @@ static int findRetAddr_Callee(int **pSP, char **pPC, char *RA)
     {
         return 0;
     }
-    
+
     for (i = 0; i < lmt; i++) {
         /* find nearest "addi a1, a1, -N" */
         if (*(PC - i) == 0x12 && *(PC - i + 1) == 0xc1 &&
@@ -210,7 +212,8 @@ int backtraceContext(char *PC, char *LR, int *SP,
     return lvl;
 }
 
-/* printf call stack */
+/* printf call stack
+   return levels of call stack */
 int backtrace_now(int (*print_func)(const char *fmt, ...))
 {
     char *PC;
@@ -244,7 +247,8 @@ int backtrace_now(int (*print_func)(const char *fmt, ...))
     return lvl;
 }
 
-/* printf call stack for task */
+/* printf call stack for task
+   return levels of call stack */
 int backtrace_task(char *taskname, int (*print_func)(const char *fmt, ...))
 {
     char    *PC;
@@ -256,7 +260,7 @@ int backtrace_task(char *taskname, int (*print_func)(const char *fmt, ...))
         print_func = ets_printf;
     }
 
-    task = debug_task_find(taskname);
+    task = krhino_task_find(taskname);
     if (task == NULL) {
         print_func("Task not found : %s\n", taskname);
         return 0;
@@ -267,3 +271,22 @@ int backtrace_task(char *taskname, int (*print_func)(const char *fmt, ...))
     print_func("TaskName  : %s\n", taskname);
     return backtraceContext(PC, LR, SP, print_func);
 }
+
+/* backtrace start with PC and SP, find LR from stack memory
+   return levels of call stack */
+int backtrace_caller(char *PC, int *SP,
+                     int (*print_func)(const char *fmt, ...))
+{
+    return 0;
+}
+
+/* backtrace start with PC SP and LR
+   return levels of call stack */
+int backtrace_callee(char *PC, int *SP, char *LR,
+                     int (*print_func)(const char *fmt, ...))
+{
+    backtraceContext(PC, LR, SP, print_func);
+    return 1;
+}
+#endif
+
